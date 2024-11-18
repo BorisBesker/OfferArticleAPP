@@ -1,11 +1,12 @@
 ﻿@page "/offer-new"
 @using OfferArticleAppBlazor.Components
 @using OfferArticleAppBlazor.Models
+@using OfferArticleAppBlazors.Models
 @using static OfferArticleAppBlazor.Components.EditableGrid
 @inject HttpClient Http
+@inject NavigationManager NavigationManager
 
 <h3>Products Table</h3>
-
 @if (articles == null)
 {
     <p>Loading...</p>
@@ -15,18 +16,28 @@ else
     <div class="mb-3">
         <button class="btn btn-primary" @onclick="AddNewRow">Add New Row</button>
     </div>
+    <EditableGrid Rows="@tableRows"
+                  AllowRemove="true"
+                  OnRowRemoved="@RemoveRow"
+                  ProductSelectionTemplate="@ProductSelectionTemplate" />
 
-    <EditableGrid 
-        Rows="@tableRows"
-        AllowRemove="true"
-        OnRowRemoved="@RemoveRow"
-        ProductSelectionTemplate="@ProductSelectionTemplate"
-    />
+    @if (!string.IsNullOrEmpty(errorMessage))
+    {
+        <div class="alert alert-danger mt-3">@errorMessage</div>
+    }
+
+    <div class="mt-3">
+        <button class="btn btn-success"
+                @onclick="CreateOffer"
+                disabled="@(!IsFormValid())">
+            Create Offer
+        </button>
+    </div>
 }
-
 @code {
     private ArticleIdDto[]? articles;
     private List<TableRowModel> tableRows = new();
+    private string errorMessage = string.Empty;
 
     protected override async Task OnInitializedAsync()
     {
@@ -48,7 +59,7 @@ else
     }
 
     // Define the RenderFragment for product selection
-    private RenderFragment<TableRowModel> ProductSelectionTemplate => 
+    private RenderFragment<TableRowModel> ProductSelectionTemplate =>
         (row) => __builder =>
         {
             <select class="form-select" value="@(row.Article?.Id)" @onchange="@(e => OnProductSelected(e, row))">
@@ -71,6 +82,54 @@ else
                 row.UnitPrice = selectedArticle.Price; // Set initial price from article
                 StateHasChanged();
             }
+        }
+    }
+
+    private bool IsFormValid()
+    {
+        return tableRows.Any() &&
+               tableRows.All(row =>
+                   row.Article != null &&
+                   row.Quantity > 0 &&
+                   row.UnitPrice > 0);
+    }
+
+    private async Task CreateOffer()
+    {
+        // Reset error message
+        errorMessage = string.Empty;
+
+        // Prepare DTO
+        var offerDto = new OfferDto
+            {
+                ArticleOfferItems = tableRows.Select(row => new UpdateOrCreateArticleOfferItemDto
+                {
+                    ArticleId = row.Article!.Id,
+                    UnitPrice = row.UnitPrice!.Value,
+                    Quantity = row.Quantity
+                }).ToList()
+            };
+
+        try
+        {
+            // Send POST request
+            var response = await Http.PostAsJsonAsync("/api/offers", offerDto);
+
+            if (response.IsSuccessStatusCode)
+            {
+                // Navigate to home page on success
+                NavigationManager.NavigateTo("/");
+            }
+            else
+            {
+                // Read error message from response
+                var errorContent = await response.Content.ReadAsStringAsync();
+                errorMessage = $"Failed to create offer: {errorContent}";
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"An error occurred: {ex.Message}";
         }
     }
 }

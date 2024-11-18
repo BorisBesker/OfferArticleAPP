@@ -100,7 +100,7 @@ namespace OfferArticleWebApi.Controllers
 
                 if (!response.RecordExists)
                 {
-                    return NotFound();
+                    return BadRequest();
                 }
 
                 var responseModel = _mapper.Map<OfferIdDto>(response.Entity);
@@ -150,28 +150,28 @@ namespace OfferArticleWebApi.Controllers
             }
         }
 
-        //[HttpDelete("{id}")]
-        //[ProducesResponseType(200)]
-        //[ProducesResponseType(400)]
-        //[ProducesResponseType(404)]
-        //public IActionResult DeleteStoreItem([FromRoute] int id)
-        //{
-        //    try
-        //    {
-        //        var response = _offerService.DeleteSuplier(id);
+        [HttpDelete("{id}")]
+        [ProducesResponseType(200)]
+        [ProducesResponseType(400)]
+        [ProducesResponseType(404)]
+        public IActionResult DeleteOffer([FromRoute] int id)
+        {
+            try
+            {
+                var response = _offerService.DeleteOffer(id);
 
-        //        if (!response.RecordExists)
-        //        {
-        //            return NotFound();
-        //        }
+                if (!response.RecordExists)
+                {
+                    return NotFound();
+                }
 
-        //        return NoContent();
-        //    }
-        //    catch (Exception)
-        //    {
-        //        // Log the exception or handle it appropriately
-        //        return StatusCode(500, "Internal server error");
-        //    }
-        //}
+                return NoContent();
+            }
+            catch (Exception)
+            {
+                // Log the exception or handle it appropriately
+                return StatusCode(500, "Internal server error");
+            }
+        }
     }
 }

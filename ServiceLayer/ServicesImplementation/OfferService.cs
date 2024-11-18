@@ -71,10 +71,8 @@ namespace ServiceLayer.ServicesImplementation
             {
                 if (!updateOfferModel.ArticleOfferItems.Any(c => c.ArticleId == existingArticle.ArticleId))
                 {
-                    var articleToRemove = _database.Articles.Get(existingArticle.ArticleId);
-
                     var articleOfferToRemove =
-                        offer.ArticleOfferItems.SingleOrDefault(x => x.ArticleId == existingArticle.ArticleId);
+                        offer.ArticleOfferItems.Single(x => x.ArticleId == existingArticle.ArticleId);
 
 
                     offer.ArticleOfferItems.Remove(articleOfferToRemove);
@@ -102,23 +100,23 @@ namespace ServiceLayer.ServicesImplementation
             return new ServiceResponse<Offer> { Success = true, RecordExists = true, Entity = updateOfferModel };
         }
 
-        //public ServiceResponse<Suplier> DeleteSuplier(int id)
-        //{
-        //    if (!_database.Supliers.Exists(id))
-        //    {
-        //        return new ServiceResponse<Suplier> { Success = false, RecordExists = false };
-        //    }
+        public ServiceResponse<Offer> DeleteOffer(int id)
+        {
+            if (!_database.Offers.Exists(id))
+            {
+                return new ServiceResponse<Offer> { Success = false, RecordExists = false };
+            }
 
-        //    var suplier = new Suplier
-        //    {
-        //        Id = id
-        //    };
+            var offer = new Offer()
+            {
+                Id = id
+            };
 
-        //    _database.Supliers.Remove(suplier);
+            _database.Offers.Remove(offer);
 
-        //    _database.Save();
+            _database.Save();
 
-        //    return new ServiceResponse<Suplier> { Success = true, RecordExists = true, Entity = suplier };
-        //}
+            return new ServiceResponse<Offer> { Success = true, RecordExists = true, Entity = offer };
+        }
     }
 }

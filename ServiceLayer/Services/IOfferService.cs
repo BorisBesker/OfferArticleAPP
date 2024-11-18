@@ -9,6 +9,6 @@ namespace ServiceLayer.Services
         Offer? GetSpecificOffer(int id);
         ServiceResponse<Offer> CreateOffer(Offer item);
         ServiceResponse<Offer> UpdateOffer(int id, Offer updateOfferModel);
-        //ServiceResponse<Offer> DeleteOffer(int id);
+        public ServiceResponse<Offer> DeleteOffer(int id);
     }
 }

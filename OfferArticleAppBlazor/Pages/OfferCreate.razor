@@ -2,7 +2,7 @@
 @using OfferArticleAppBlazor.Components
 @using OfferArticleAppBlazor.Models
 @using OfferArticleAppBlazors.Models
-@using static OfferArticleAppBlazor.Components.EditableGrid
+@using static OfferArticleAppBlazor.Components.ArticlesGrid
 @inject HttpClient Http
 @inject NavigationManager NavigationManager
 
@@ -16,7 +16,7 @@ else
     <div class="mb-3">
         <button class="btn btn-primary" @onclick="AddNewRow">Add New Row</button>
     </div>
-    <EditableGrid Rows="@tableRows"
+    <ArticlesGrid Rows="@tableRows"
                   AllowRemove="true"
                   OnRowRemoved="@RemoveRow"
                   ProductSelectionTemplate="@ProductSelectionTemplate" />

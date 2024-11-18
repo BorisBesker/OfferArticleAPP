@@ -1,5 +1,5 @@
 ﻿@using OfferArticleAppBlazor.Models
-@* EditableGrid.razor *@
+@* ArticlesGrid.razor *@
 
 <div class="table-responsive">
     <table class="table">
@@ -8,7 +8,7 @@
                 <th>Product</th>
                 <th>Unit Price</th>
                 <th>Quantity</th>
-                <th>Total</th>
+                <th>Item Price</th>
                 @if (AllowRemove)
                 {
                     <th>Actions</th>
@@ -104,11 +104,10 @@
         return string.Empty;
     }
 
-    // Define the model here or reference it from a shared models file
     public class TableRowModel
     {
         public ArticleIdDto? Article { get; set; }
         public decimal? UnitPrice { get; set; }
-        public int Quantity { get; set; } = 1; // Default to 1
+        public int Quantity { get; set; } = 1;
     }
 }

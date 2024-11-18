@@ -1,0 +1,152 @@
+﻿@page "/offer-new"
+@using OfferArticleAppBlazor.Components
+@using OfferArticleAppBlazor.Models
+@using OfferArticleAppBlazors.Models
+@using static OfferArticleAppBlazor.Components.ArticlesGrid
+@inject HttpClient Http
+@inject NavigationManager NavigationManager
+
+<h3>Create New Offer</h3>
+@if (articles == null)
+{
+    <p>Loading...</p>
+}
+else
+{
+    <div class="mb-3">
+        <button class="btn btn-primary" @onclick="AddNewRow">Add New Row</button>
+    </div>
+
+    <ArticlesGrid Rows="@tableRows"
+    AllowRemove="true"
+    OnRowRemoved="@RemoveRow"
+    ProductSelectionTemplate="@ProductSelectionTemplate"
+    OnUnitPriceChanged="OnUnitPriceChanged"
+    OnQuantityChanged="OnQuantityChanged" />
+
+    @if (!string.IsNullOrEmpty(errorMessage))
+    {
+        <div class="alert alert-danger mt-3">@errorMessage</div>
+    }
+
+    <div class="mt-3">
+        <button class="btn btn-success"
+        @onclick="CreateOffer"
+        disabled="@(!IsFormValid())">
+            Create Offer
+        </button>
+    </div>
+}
+@code {
+    private ArticleIdDto[]? articles;
+    private List<TableRowModel> tableRows = new();
+    private string errorMessage = string.Empty;
+
+    protected override async Task OnInitializedAsync()
+    {
+        articles = await Http.GetFromJsonAsync<ArticleIdDto[]>("/api/articles");
+        // Initialize with one empty row
+        AddNewRow();
+    }
+
+    private void AddNewRow()
+    {
+        tableRows.Add(new TableRowModel());
+        StateHasChanged();
+    }
+
+    private RenderFragment<TableRowModel> ProductSelectionTemplate => (row) => __builder =>
+    {
+        <select class="form-select" value="@(row.Article?.Id)" @onchange="@(e => OnProductSelected(e, row))">
+            <option value="">Select a product...</option>
+            @foreach (var article in articles)
+            {
+                <option value="@article.Id">@article.ArticleName</option>
+            }
+        </select>
+    };
+
+    private void OnProductSelected(ChangeEventArgs e, TableRowModel row)
+    {
+        if (int.TryParse(e.Value?.ToString(), out int selectedId))
+        {
+            var selectedArticle = articles?.FirstOrDefault(a => a.Id == selectedId);
+            if (selectedArticle != null)
+            {
+                row.Article = selectedArticle;
+                row.UnitPrice = selectedArticle.Price;
+                row.PriceValidationMessage = null;
+                row.QuantityValidationMessage = null;
+                StateHasChanged();
+            }
+        }
+        else
+        {
+            row.Article = null;
+            StateHasChanged();
+        }
+    }
+
+    private void RemoveRow(TableRowModel row)
+    {
+        tableRows.Remove(row);
+        StateHasChanged();
+    }
+
+    private void OnUnitPriceChanged((TableRowModel Row, decimal? UnitPrice) update)
+    {
+        var row = update.Row;
+        row.UnitPrice = update.UnitPrice;
+        StateHasChanged();
+    }
+
+    private void OnQuantityChanged((TableRowModel Row, int? Quantity) update)
+    {
+        var row = update.Row;
+        row.Quantity = update.Quantity;
+        StateHasChanged();
+    }
+
+    private bool IsFormValid()
+    {
+        return tableRows.Any() &&
+               tableRows.All(row =>
+                   row.Article?.Id > 0 &&
+                   row.Quantity.HasValue && row.Quantity > 0 &&
+                   row.UnitPrice.HasValue && row.UnitPrice > 0);
+    }
+
+    private async Task CreateOffer()
+    {
+        errorMessage = string.Empty;
+
+        var offerDto = new OfferDto
+            {
+                ArticleOfferItems = tableRows.Select(row => new UpdateOrCreateArticleOfferItemDto
+                {
+                    ArticleId = row.Article!.Id,
+                    UnitPrice = row.UnitPrice!.Value,
+                    Quantity = row.Quantity!.Value
+                }).ToList()
+            };
+
+        try
+        {
+            var response = await Http.PostAsJsonAsync("/api/offers", offerDto);
+
+            if (response.IsSuccessStatusCode)
+            {
+                NavigationManager.NavigateTo("/");
+            }
+            else
+            {
+                var errorContent = await response.Content.ReadAsStringAsync();
+                errorMessage = $"Failed to create offer: {errorContent}";
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"An error occurred: {ex.Message}";
+        }
+    }
+}

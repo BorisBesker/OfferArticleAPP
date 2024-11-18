@@ -1,7 +1,81 @@
-﻿@page "/"
+﻿@* Offers.razor *@
+@page "/"
+@using OfferArticleAppBlazor.Models
+@inject HttpClient Http
+@inject NavigationManager NavigationManager
 
-<PageTitle>Home</PageTitle>
+<h3>Offers</h3>
 
-<h1>Hello, world!</h1>
+@if (offers == null)
+{
+    <p>Loading...</p>
+}
+else
+{
+    <div class="table-responsive">
+        <table class="table table-hover">
+            <thead>
+                <tr>
+                    <th style="cursor: pointer">ID</th>
+                    <th>Date</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var offer in offers)
+                {
+                    <tr>
+                        <td style="cursor: pointer" @onclick=@(() => NavigateToOfferDetails(offer.Id))>@offer.Id</td>
+                        <td>@offer.Date.ToShortDateString()</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
 
-Welcome to your new app.
+    <div class="d-flex justify-content-between align-items-center mt-3">
+        <div>
+            <button class="btn btn-primary me-2" @onclick="PreviousPage" disabled="@(currentPage == 1)">Previous</button>
+            <span class="mx-2">Page @currentPage</span>
+            <button class="btn btn-primary ms-2" @onclick="NextPage" disabled="@(offers.Length < pageSize)">Next</button>
+        </div>
+    </div>
+}
+
+@code {
+    private OfferIdDto[]? offers;
+    private int currentPage = 1;
+    private const int pageSize = 3;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadOffers();
+    }
+
+    private async Task LoadOffers()
+    {
+        offers = await Http.GetFromJsonAsync<OfferIdDto[]>($"/api/offers?Page={currentPage}&PageSize={pageSize}");
+    }
+
+    private async Task PreviousPage()
+    {
+        if (currentPage > 1)
+        {
+            currentPage--;
+            await LoadOffers();
+        }
+    }
+
+    private async Task NextPage()
+    {
+        if (offers?.Length == pageSize)
+        {
+            currentPage++;
+            await LoadOffers();
+        }
+    }
+
+    private void NavigateToOfferDetails(int offerId)
+    {
+        NavigationManager.NavigateTo($"/offers/{offerId}");
+    }
+}

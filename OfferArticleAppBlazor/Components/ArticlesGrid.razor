@@ -27,17 +27,25 @@
                     </td>
                     <td>
                         <input type="number"
-                               class="form-control"
+                               class="form-control @(row.PriceValidationMessage != null ? "is-invalid" : "")"
                                value="@row.UnitPrice"
-                               @onchange="@(e => OnUnitPriceChanged(e, row))"
+                               @onchange="@(e => HandleUnitPriceChanged(e, row))"
                                step="0.01" />
+                        @if (row.PriceValidationMessage != null)
+                        {
+                            <div class="invalid-feedback">@row.PriceValidationMessage</div>
+                        }
                     </td>
                     <td>
                         <input type="number"
-                               class="form-control"
+                               class="form-control @(row.QuantityValidationMessage != null ? "is-invalid" : "")"
                                value="@row.Quantity"
-                               @onchange="@(e => OnQuantityChanged(e, row))"
+                               @onchange="@(e => HandleQuantityChanged(e, row))"
                                min="1" />
+                        @if (row.QuantityValidationMessage != null)
+                        {
+                            <div class="invalid-feedback">@row.QuantityValidationMessage</div>
+                        }
                     </td>
                     <td>
                         @CalculateTotal(row)
@@ -51,63 +59,106 @@
                 </tr>
             }
         </tbody>
+        <tfoot>
+            <tr>
+                <td colspan="3" class="text-end"><strong>Grand Total:</strong></td>
+                <td><strong>@CalculateGrandTotal()</strong></td>
+                @if (AllowRemove)
+                {
+                    <td></td>
+                }
+            </tr>
+        </tfoot>
     </table>
 </div>
 
 @code {
     [Parameter]
     public List<TableRowModel> Rows { get; set; } = new();
-
     [Parameter]
     public RenderFragment<TableRowModel>? ProductSelectionTemplate { get; set; }
-
     [Parameter]
     public bool AllowRemove { get; set; } = false;
-
     [Parameter]
     public EventCallback<TableRowModel> OnRowRemoved { get; set; }
+    [Parameter]
+    public EventCallback<(TableRowModel Row, decimal? UnitPrice)> OnUnitPriceChanged { get; set; }
+    [Parameter]
+    public EventCallback<(TableRowModel Row, int? Quantity)> OnQuantityChanged { get; set; }
+
+    private async Task HandleUnitPriceChanged(ChangeEventArgs e, TableRowModel row)
+    {
+        decimal? price = null;
+        string? errorMessage = null;
+
+        if (decimal.TryParse(e.Value?.ToString(), out decimal parsedPrice))
+        {
+            if (parsedPrice > 0)
+            {
+                price = parsedPrice;
+            }
+            else
+            {
+                errorMessage = "Value has to be greater than 0";
+            }
+        }
+        else
+        {
+            errorMessage = "Invalid format";
+        }
+
+        row.PriceValidationMessage = errorMessage;
+        await OnUnitPriceChanged.InvokeAsync((row, price));
+        StateHasChanged();
+    }
+
+    private async Task HandleQuantityChanged(ChangeEventArgs e, TableRowModel row)
+    {
+        int? quantity = null;
+        string? errorMessage = null;
+
+        if (int.TryParse(e.Value?.ToString(), out int parsedQuantity))
+        {
+            if (parsedQuantity > 0)
+            {
+                quantity = parsedQuantity;
+            }
+            else
+            {
+                errorMessage = "Value has to be greater than 0";
+            }
+        }
+        else
+        {
+            errorMessage = "Invalid format";
+        }
+
+        row.QuantityValidationMessage = errorMessage;
+        await OnQuantityChanged.InvokeAsync((row, quantity));
+        StateHasChanged();
+    }
 
     private async Task RemoveRow(TableRowModel row)
     {
         Rows.Remove(row);
-        if (OnRowRemoved.HasDelegate)
-        {
-            await OnRowRemoved.InvokeAsync(row);
-        }
-        StateHasChanged();
+        await OnRowRemoved.InvokeAsync(row);
     }
 
-    private void OnUnitPriceChanged(ChangeEventArgs e, TableRowModel row)
-    {
-        if (decimal.TryParse(e.Value?.ToString(), out decimal price))
-        {
-            row.UnitPrice = price;
-            StateHasChanged();
-        }
-    }
+    private string CalculateTotal(TableRowModel row) =>
+        row.UnitPrice.HasValue && row.Quantity.HasValue ?
+        (row.UnitPrice.Value * row.Quantity.Value).ToString("C") : string.Empty;
 
-    private void OnQuantityChanged(ChangeEventArgs e, TableRowModel row)
-    {
-        if (int.TryParse(e.Value?.ToString(), out int quantity) && quantity > 0)
-        {
-            row.Quantity = quantity;
-            StateHasChanged();
-        }
-    }
-
-    private string CalculateTotal(TableRowModel row)
-    {
-        if (row.UnitPrice.HasValue && row.Quantity > 0)
-        {
-            return (row.UnitPrice.Value * row.Quantity).ToString("C");
-        }
-        return string.Empty;
-    }
+    private string CalculateGrandTotal() =>
+        Rows.Where(row => row.UnitPrice.HasValue && row.Quantity.HasValue)
+            .Sum(row => row.UnitPrice.Value * row.Quantity.Value)
+            .ToString("C");
 
     public class TableRowModel
     {
         public ArticleIdDto? Article { get; set; }
         public decimal? UnitPrice { get; set; }
-        public int Quantity { get; set; } = 1;
+        public int? Quantity { get; set; } = 1;
+        public string? PriceValidationMessage { get; set; }
+        public string? QuantityValidationMessage { get; set; }
     }
 }

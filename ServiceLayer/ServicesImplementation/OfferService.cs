@@ -93,8 +93,7 @@ namespace ServiceLayer.ServicesImplementation
                 }
                 else
                 {
-                    var articleToAdd = _database.Articles.Get(articleOfferItem.ArticleId);
-                    offer.ArticleOfferItems.Add(new ArticleOfferItem { Offer = offer, Article = articleToAdd });
+                    offer.ArticleOfferItems.Add(new ArticleOfferItem { UnitPrice = articleOfferItem.UnitPrice, Quantity = articleOfferItem.Quantity, ArticleId = articleOfferItem.ArticleId, OfferId = id });
                 }
             }
 

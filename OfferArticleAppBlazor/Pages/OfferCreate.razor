@@ -1,0 +1,76 @@
+﻿@page "/offer-new"
+@using OfferArticleAppBlazor.Components
+@using OfferArticleAppBlazor.Models
+@using static OfferArticleAppBlazor.Components.EditableGrid
+@inject HttpClient Http
+
+<h3>Products Table</h3>
+
+@if (articles == null)
+{
+    <p>Loading...</p>
+}
+else
+{
+    <div class="mb-3">
+        <button class="btn btn-primary" @onclick="AddNewRow">Add New Row</button>
+    </div>
+
+    <EditableGrid 
+        Rows="@tableRows"
+        AllowRemove="true"
+        OnRowRemoved="@RemoveRow"
+        ProductSelectionTemplate="@ProductSelectionTemplate"
+    />
+}
+
+@code {
+    private ArticleIdDto[]? articles;
+    private List<TableRowModel> tableRows = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        articles = await Http.GetFromJsonAsync<ArticleIdDto[]>("/api/articles");
+        // Initialize with one empty row
+        AddNewRow();
+    }
+
+    private void AddNewRow()
+    {
+        tableRows.Add(new TableRowModel());
+        StateHasChanged();
+    }
+
+    private void RemoveRow(TableRowModel row)
+    {
+        tableRows.Remove(row);
+        StateHasChanged();
+    }
+
+    // Define the RenderFragment for product selection
+    private RenderFragment<TableRowModel> ProductSelectionTemplate => 
+        (row) => __builder =>
+        {
+            <select class="form-select" value="@(row.Article?.Id)" @onchange="@(e => OnProductSelected(e, row))">
+                <option value="">Select a product...</option>
+                @foreach (var article in articles)
+                {
+                    <option value="@article.Id">@article.ArticleName</option>
+                }
+            </select>
+        };
+
+    private void OnProductSelected(ChangeEventArgs e, TableRowModel row)
+    {
+        if (int.TryParse(e.Value?.ToString(), out int selectedId))
+        {
+            var selectedArticle = articles?.FirstOrDefault(a => a.Id == selectedId);
+            if (selectedArticle != null)
+            {
+                row.Article = selectedArticle;
+                row.UnitPrice = selectedArticle.Price; // Set initial price from article
+                StateHasChanged();
+            }
+        }
+    }
+}

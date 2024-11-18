@@ -1,0 +1,59 @@
+﻿@page "/offers/{Id:int}"
+@using OfferArticleAppBlazor.Components
+@using OfferArticleAppBlazor.Models
+@using static OfferArticleAppBlazor.Components.EditableGrid
+@inject HttpClient Http
+
+<h3>Offer Details</h3>
+
+@if (offer == null)
+{
+    <p>Loading...</p>
+}
+else
+{
+    <div class="mb-3">
+        <strong>Offer ID:</strong> @offer.Id
+        <strong class="ms-3">Date:</strong> @offer.Date.ToShortDateString()
+    </div>
+
+    <EditableGrid 
+        Rows="@ConvertToTableRows(offer.ArticleOfferItems)" 
+        AllowRemove="false"
+        ProductSelectionTemplate="@ProductSelectionTemplate"
+    />
+}
+
+@code {
+    [Parameter]
+    public int Id { get; set; }
+
+    private OfferIdDto? offer;
+
+    // Convert ArticleOfferItemDto to TableRowModel
+    private List<TableRowModel> ConvertToTableRows(List<ArticleOfferItemDto> offerItems)
+    {
+        return offerItems.Select(item => new TableRowModel
+        {
+            Article = new ArticleIdDto 
+            { 
+                Id = item.ArticleId, 
+                ArticleName = item.ArticleName 
+            },
+            UnitPrice = item.UnitPrice,
+            Quantity = (int)item.Quantity
+        }).ToList();
+    }
+
+    // Define the RenderFragment for product selection
+    private RenderFragment<TableRowModel> ProductSelectionTemplate => 
+        (row) => __builder =>
+        {
+            <text>@row.Article?.ArticleName</text>
+        };
+
+    protected override async Task OnInitializedAsync()
+    {
+        offer = await Http.GetFromJsonAsync<OfferIdDto>($"/api/offers/{Id}");
+    }
+}

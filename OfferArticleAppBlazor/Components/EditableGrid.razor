@@ -1,0 +1,114 @@
+﻿@using OfferArticleAppBlazor.Models
+@* EditableGrid.razor *@
+
+<div class="table-responsive">
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Product</th>
+                <th>Unit Price</th>
+                <th>Quantity</th>
+                <th>Total</th>
+                @if (AllowRemove)
+                {
+                    <th>Actions</th>
+                }
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var row in Rows)
+            {
+                <tr>
+                    <td>
+                        @if (ProductSelectionTemplate != null)
+                        {
+                            @ProductSelectionTemplate(row)
+                        }
+                    </td>
+                    <td>
+                        <input type="number"
+                               class="form-control"
+                               value="@row.UnitPrice"
+                               @onchange="@(e => OnUnitPriceChanged(e, row))"
+                               step="0.01" />
+                    </td>
+                    <td>
+                        <input type="number"
+                               class="form-control"
+                               value="@row.Quantity"
+                               @onchange="@(e => OnQuantityChanged(e, row))"
+                               min="1" />
+                    </td>
+                    <td>
+                        @CalculateTotal(row)
+                    </td>
+                    @if (AllowRemove)
+                    {
+                        <td>
+                            <button class="btn btn-danger" @onclick="() => RemoveRow(row)">Remove</button>
+                        </td>
+                    }
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>
+
+@code {
+    [Parameter]
+    public List<TableRowModel> Rows { get; set; } = new();
+
+    [Parameter]
+    public RenderFragment<TableRowModel>? ProductSelectionTemplate { get; set; }
+
+    [Parameter]
+    public bool AllowRemove { get; set; } = false;
+
+    [Parameter]
+    public EventCallback<TableRowModel> OnRowRemoved { get; set; }
+
+    private async Task RemoveRow(TableRowModel row)
+    {
+        Rows.Remove(row);
+        if (OnRowRemoved.HasDelegate)
+        {
+            await OnRowRemoved.InvokeAsync(row);
+        }
+        StateHasChanged();
+    }
+
+    private void OnUnitPriceChanged(ChangeEventArgs e, TableRowModel row)
+    {
+        if (decimal.TryParse(e.Value?.ToString(), out decimal price))
+        {
+            row.UnitPrice = price;
+            StateHasChanged();
+        }
+    }
+
+    private void OnQuantityChanged(ChangeEventArgs e, TableRowModel row)
+    {
+        if (int.TryParse(e.Value?.ToString(), out int quantity) && quantity > 0)
+        {
+            row.Quantity = quantity;
+            StateHasChanged();
+        }
+    }
+
+    private string CalculateTotal(TableRowModel row)
+    {
+        if (row.UnitPrice.HasValue && row.Quantity > 0)
+        {
+            return (row.UnitPrice.Value * row.Quantity).ToString("C");
+        }
+        return string.Empty;
+    }
+
+    // Define the model here or reference it from a shared models file
+    public class TableRowModel
+    {
+        public ArticleIdDto? Article { get; set; }
+        public decimal? UnitPrice { get; set; }
+        public int Quantity { get; set; } = 1; // Default to 1
+    }
+}
